@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌟 謝謝守護我的人 - 互動教案</title>
+  
+  <!-- 引入 Tailwind CSS (負責排版與顏色) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- 引入 Lucide Icons (負責精美的圖示) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- 自訂動畫 CSS -->
+  <style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes slide-up { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes bounce-in { 0% { transform: scale(0.8); opacity: 0; } 50% { transform: scale(1.05); } 100% { transform: scale(1); opacity: 1; } }
+    
+    .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+    .animate-slide-up { animation: slide-up 0.4s ease-out forwards; }
+    .animate-bounce-in { animation: bounce-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+  </style>
+</head>
+<body class="bg-[#f8fafc] font-sans">
+
+  <!-- 應用程式的根節點 -->
+  <div id="app"></div>
+
+  <!-- 主要邏輯 JavaScript -->
+  <script>
+    // --- 狀態管理 (State) ---
+    const state = {
+      page: 'home', // 'home', 'main', 'review', 'voting', 'video'
+      activeCharId: null,
+      isVotingFinished: false,
+      characters: [
+        { 
+          id: 1, 
+          name: '護理師阿姨', 
+          imgSrc: 'https://drive.google.com/thumbnail?id=1-cnPm8PxJ52TcwNL3RTiv8kKq2oqRTds&sz=w800', 
+          color: { bg: 'bg-pink-100', border: 'border-pink-300', text: 'text-pink-600', btn: 'bg-pink-400' },
+          revealed: false, where: [], how: [], votes: 0 
+        },
+        { 
+          id: 2, 
+          name: '佳珍主任', 
+          imgSrc: 'https://drive.google.com/thumbnail?id=16qyrjYNP-Nm4T9NekhNKcWbU42gPIA8q&sz=w800', 
+          color: { bg: 'bg-purple-100', border: 'border-purple-300', text: 'text-purple-600', btn: 'bg-purple-400' },
+          revealed: false, where: [], how: [], votes: 0 
+        },
+        { 
+          id: 3, 
+          name: '志工媽媽', 
+          imgSrc: 'https://drive.google.com/thumbnail?id=1CuLinA5T6RQz7O4m4K2R5qzkR60VMo8M&sz=w800', 
+          color: { bg: 'bg-orange-100', border: 'border-orange-300', text: 'text-orange-600', btn: 'bg-orange-400' },
+          revealed: false, where: [], how: [], votes: 0 
+        },
+        { 
+          id: 4, 
+          name: '廚房阿姨', 
+          imgSrc: 'https://drive.google.com/thumbnail?id=1uJ5W19PSNZJES7mM6GiUCc7-TP0cfQPU&sz=w800', 
+          color: { bg: 'bg-yellow-100', border: 'border-yellow-300', text: 'text-yellow-600', btn: 'bg-yellow-400' },
+          revealed: false, where: [], how: [], votes: 0 
+        },
+        { 
+          id: 5, 
+          name: '警衛伯伯', 
+          imgSrc: 'https://drive.google.com/thumbnail?id=1v8pnBfQOCzFhfKjGsMGdUvX6XPQ4Hta6&sz=w800', 
+          color: { bg: 'bg-blue-100', border: 'border-blue-300', text: 'text-blue-600', btn: 'bg-blue-400' },
+          revealed: false, where: [], how: [], votes: 0 
+        },
+      ]
+    };
+
+    // --- 互動功能 (Actions) ---
+    window.setPage = function(newPage) {
+      state.page = newPage;
+      if (newPage === 'voting' && state.isVotingFinished) {
+          state.isVotingFinished = false; // Reset voting state when entering voting page
+      }
+      render();
+    };
+
+    window.setIsVotingFinished = function(finished) {
+      state.isVotingFinished = finished;
+      render();
+    };
+
+    window.handleCharacterClick = function(id) {
+      const char = state.characters.find(c => c.id === id);
+      if (char) char.revealed = true;
+      state.activeCharId = id;
+      render();
+    };
+
+    window.handleAddAnswer = function(type) {
+      const inputEl = document.getElementById(type + 'Input');
+      const val = inputEl.value.trim();
+      if (!val) return;
+
+      const char = state.characters.find(c => c.id === state.activeCharId);
+      if (type === 'where') char.where.push(val);
+      else char.how.push(val);
+      
+      render(); // 重新渲染畫面 (輸入框會自動清空)
+    };
+
+    window.handleVoteChange = function(id, delta) {
+      const char = state.characters.find(c => c.id === id);
+      char.votes = Math.max(0, char.votes + delta);
+      render();
+    };
+
+    window.handleVoteInput = function(id, value) {
+      const char = state.characters.find(c => c.id === id);
+      const val = parseInt(value, 10);
+      char.votes = isNaN(val) ? 0 : Math.max(0, val);
+      // 注意：這裡不呼叫 render，避免輸入到一半失去焦點，我們依賴 input 的 value
+    };
+
+    // --- 畫面渲染邏輯 (Renderers) ---
+    function renderHome() {
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-yellow-50 via-pink-50 to-blue-50 flex flex-col items-center justify-center font-sans">
+          <div class="bg-white/60 p-12 rounded-[3rem] shadow-xl text-center backdrop-blur-sm border-4 border-white">
+            <h1 class="text-5xl md:text-6xl font-black text-gray-800 mb-6 tracking-wide" style="text-shadow: 2px 2px 4px rgba(0,0,0,0.1)">
+              🌟 謝謝守護我的人 🌟
+            </h1>
+            <p class="text-2xl text-gray-600 mb-12 font-bold">
+              我們身邊有哪些小天使呢？
+            </p>
+            <button 
+              onclick="setPage('main')"
+              class="group relative inline-flex items-center justify-center px-10 py-5 text-3xl font-bold text-white transition-all duration-200 bg-teal-400 border-4 border-teal-500 rounded-full hover:bg-teal-300 hover:scale-105 active:scale-95 shadow-[0_8px_0_rgb(20,184,166)] hover:shadow-[0_4px_0_rgb(20,184,166)] hover:translate-y-1 animate-bounce"
+            >
+              <i data-lucide="play" class="w-8 h-8 mr-3 fill-current"></i>
+              猜一猜！
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderMain() {
+      const activeChar = state.characters.find(c => c.id === state.activeCharId);
+      
+      const charCards = state.characters.map(char => `
+        <div 
+          onclick="handleCharacterClick(${char.id})"
+          class="relative cursor-pointer transition-all duration-300 transform ${state.activeCharId === char.id ? 'scale-110 z-10 border-' + char.color.border.split('-')[1] + '-300' : 'hover:scale-105 border-transparent'} bg-white rounded-3xl p-4 shadow-md border-4"
+        >
+          <div class="aspect-square rounded-2xl flex items-center justify-center mb-3 ${char.color.bg} shadow-inner overflow-hidden">
+             <img src="${char.imgSrc}" class="w-full h-full object-cover" alt="${char.name}" />
+          </div>
+          
+          <div class="h-12 flex items-center justify-center">
+            ${char.revealed 
+              ? `<span class="text-2xl font-bold ${char.color.text} animate-fade-in">${char.name}</span>`
+              : `<span class="text-3xl font-black text-gray-300">?</span>`
+            }
+          </div>
+          
+          ${char.revealed && (char.where.length > 0 || char.how.length > 0) 
+            ? `<i data-lucide="check-circle" class="absolute -top-3 -right-3 w-8 h-8 text-green-500 bg-white rounded-full"></i>`
+            : ''
+          }
+        </div>
+      `).join('');
+
+      let discussionArea = '';
+      if (activeChar) {
+        discussionArea = `
+          <div class="w-full max-w-6xl animate-slide-up mt-10">
+            <div class="bg-white rounded-[3rem] p-8 shadow-xl border-t-8 ${activeChar.color.border}">
+              <div class="flex items-center justify-center mb-8">
+                <img src="${activeChar.imgSrc}" alt="${activeChar.name}" class="w-20 h-20 rounded-full border-4 border-white shadow-sm object-cover mr-4" />
+                <h3 class="text-4xl font-black text-gray-800">
+                  來聊聊 <span class="${activeChar.color.text}">${activeChar.name}</span> 吧！
+                </h3>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- 問題 1 -->
+                <div class="bg-blue-50/50 rounded-3xl p-6 border-2 border-blue-100">
+                  <h4 class="text-2xl font-bold text-blue-800 mb-4 flex items-center">
+                    <i data-lucide="map-pin" class="w-8 h-8 mr-2 text-blue-500"></i> 在哪裡我們會看到他們？
+                  </h4>
+                  <div class="flex space-x-2 mb-6">
+                    <input type="text" id="whereInput" placeholder="紀錄小朋友說的地點..." onkeypress="if(event.key === 'Enter') handleAddAnswer('where')" class="flex-1 px-4 py-3 rounded-2xl border-2 border-blue-200 focus:outline-none focus:border-blue-400 text-xl" />
+                    <button onclick="handleAddAnswer('where')" class="px-6 py-3 bg-blue-500 text-white font-bold rounded-2xl hover:bg-blue-600 active:scale-95 transition-transform text-xl">新增</button>
+                  </div>
+                  <div class="flex flex-wrap gap-3">
+                    ${activeChar.where.map(ans => `<div class="animate-bounce-in px-5 py-3 bg-white border-2 border-blue-300 text-blue-700 rounded-2xl shadow-sm text-xl font-bold flex items-center">📍 ${ans}</div>`).join('')}
+                    ${activeChar.where.length === 0 ? `<div class="text-blue-300 font-bold text-lg w-full text-center py-4 border-2 border-dashed border-blue-200 rounded-2xl">等待小朋友的回答喔...</div>` : ''}
+                  </div>
+                </div>
+
+                <!-- 問題 2 -->
+                <div class="bg-pink-50/50 rounded-3xl p-6 border-2 border-pink-100">
+                  <h4 class="text-2xl font-bold text-pink-800 mb-4 flex items-center">
+                    <i data-lucide="message-circle" class="w-8 h-8 mr-2 text-pink-500"></i> 如何幫助我們？
+                  </h4>
+                  <div class="flex space-x-2 mb-6">
+                    <input type="text" id="howInput" placeholder="紀錄小朋友說的幫助..." onkeypress="if(event.key === 'Enter') handleAddAnswer('how')" class="flex-1 px-4 py-3 rounded-2xl border-2 border-pink-200 focus:outline-none focus:border-pink-400 text-xl" />
+                    <button onclick="handleAddAnswer('how')" class="px-6 py-3 bg-pink-500 text-white font-bold rounded-2xl hover:bg-pink-600 active:scale-95 transition-transform text-xl">新增</button>
+                  </div>
+                  <div class="flex flex-wrap gap-3">
+                    ${activeChar.how.map(ans => `<div class="animate-bounce-in px-5 py-3 bg-white border-2 border-pink-300 text-pink-700 rounded-2xl shadow-sm text-xl font-bold flex items-center">💖 ${ans}</div>`).join('')}
+                    ${activeChar.how.length === 0 ? `<div class="text-pink-300 font-bold text-lg w-full text-center py-4 border-2 border-dashed border-pink-200 rounded-2xl">等待小朋友的回答喔...</div>` : ''}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        discussionArea = `
+          <div class="mt-12 text-2xl font-bold text-gray-400 animate-pulse bg-white px-8 py-4 rounded-full shadow-sm">
+            ☝️ 點擊上面的照片，看看他們是誰吧！
+          </div>
+        `;
+      }
+
+      return `
+        <div class="min-h-screen p-6 flex flex-col items-center">
+          <div class="w-full max-w-6xl flex justify-between items-center mb-8 bg-white p-4 rounded-3xl shadow-sm border-2 border-gray-100">
+            <h2 class="text-4xl font-black text-gray-800 tracking-wide flex items-center">
+              <span class="text-5xl mr-3">👀</span> 這是誰？
+            </h2>
+            <div class="flex space-x-4">
+              <button onclick="setPage('voting')" class="flex items-center px-6 py-3 bg-orange-400 text-white text-xl font-bold rounded-full shadow-md hover:bg-orange-500 hover:scale-105 transition-all">
+                <i data-lucide="trophy" class="w-6 h-6 mr-2"></i> 舉手投票
+              </button>
+              <button onclick="setPage('review')" class="flex items-center px-6 py-3 bg-indigo-500 text-white text-xl font-bold rounded-full shadow-md hover:bg-indigo-600 hover:scale-105 transition-all">
+                看總結回顧 <i data-lucide="arrow-right" class="w-6 h-6 ml-2"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="w-full max-w-6xl grid grid-cols-2 md:grid-cols-5 gap-4">
+            ${charCards}
+          </div>
+          
+          ${discussionArea}
+        </div>
+      `;
+    }
+
+    function renderReview() {
+      const revealedChars = state.characters.filter(c => c.revealed);
+      const cards = revealedChars.map(char => `
+        <div class="p-6 rounded-3xl border-4 shadow-lg bg-white ${char.color.border}">
+          <div class="flex items-center space-x-4 mb-4 border-b-2 pb-4 border-gray-100">
+            <img src="${char.imgSrc}" alt="${char.name}" class="w-16 h-16 rounded-full border-4 border-white shadow-sm object-cover" />
+            <h3 class="text-2xl font-bold text-gray-800">${char.name}</h3>
+          </div>
+          <div class="space-y-4">
+            <div>
+              <h4 class="flex items-center text-lg font-bold text-gray-600 mb-2">
+                <i data-lucide="map-pin" class="w-5 h-5 mr-1"></i> 在哪裡看到：
+              </h4>
+              <div class="flex flex-wrap gap-2">
+                ${char.where.length > 0 
+                  ? char.where.map(ans => `<span class="px-3 py-1 bg-gray-100 rounded-lg font-medium text-gray-700">${ans}</span>`).join('') 
+                  : `<span class="text-gray-400 text-sm">還沒有紀錄喔</span>`
+                }
+              </div>
+            </div>
+            <div>
+              <h4 class="flex items-center text-lg font-bold text-gray-600 mb-2">
+                <i data-lucide="message-circle" class="w-5 h-5 mr-1"></i> 怎麼幫助我們：
+              </h4>
+              <div class="flex flex-wrap gap-2">
+                ${char.how.length > 0 
+                  ? char.how.map(ans => `<span class="px-3 py-1 bg-yellow-50 border border-yellow-200 rounded-lg font-medium text-gray-700">${ans}</span>`).join('') 
+                  : `<span class="text-gray-400 text-sm">還沒有紀錄喔</span>`
+                }
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-indigo-50 to-purple-50 p-8 font-sans">
+          <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-8">
+              <h2 class="text-4xl font-black text-indigo-800 bg-white px-8 py-4 rounded-full shadow-md border-4 border-indigo-200">
+                🎉 我們的感恩大回顧 🎉
+              </h2>
+              <button onclick="setPage('main')" class="flex items-center px-6 py-3 bg-white text-indigo-600 font-bold rounded-full shadow-md hover:bg-indigo-50 transition border-2 border-indigo-200">
+                <i data-lucide="home" class="w-5 h-5 mr-2"></i> 返回討論
+              </button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              ${cards}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVoting() {
+      const maxVotes = Math.max(...state.characters.map(c => c.votes));
+      const winners = state.characters.filter(c => c.votes === maxVotes && maxVotes > 0);
+      
+      let winnersHtml = '';
+      if (state.isVotingFinished && winners.length > 0) {
+        winnersHtml = `
+          <div class="mb-12 bg-white/90 p-8 rounded-[3rem] shadow-2xl border-4 border-yellow-400 text-center animate-slide-up relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-full bg-yellow-100 opacity-30 animate-pulse"></div>
+            <h3 class="text-4xl font-black text-yellow-600 mb-10 relative z-10">🏆 獲得最多票數的是... 🏆</h3>
+            <div class="flex flex-wrap justify-center gap-12 relative z-10">
+              ${winners.map(winner => `
+                <div class="relative flex flex-col items-center animate-bounce-in">
+                  <i data-lucide="crown" class="absolute -top-16 text-yellow-400 w-32 h-32 fill-current drop-shadow-xl z-20"></i>
+                  <img src="${winner.imgSrc}" alt="${winner.name}" class="w-56 h-56 rounded-full border-8 border-yellow-400 shadow-2xl object-cover mb-6 relative z-10" />
+                  <span class="text-4xl font-black text-gray-800 bg-yellow-100 px-8 py-3 rounded-full border-4 border-yellow-300 shadow-sm">
+                    ${winner.name} (${winner.votes} 票)
+                  </span>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      const voteCards = state.characters.map(char => {
+        const isWinner = state.isVotingFinished && char.votes === maxVotes && maxVotes > 0;
+        const blurClass = state.isVotingFinished && !isWinner ? 'opacity-50 grayscale-[30%]' : '';
+        const borderClass = isWinner ? 'border-yellow-400 scale-105 shadow-yellow-200' : char.color.border;
+
+        return `
+          <div class="p-6 rounded-3xl border-4 shadow-lg bg-white flex flex-col items-center transition-all duration-300 ${borderClass} ${blurClass}">
+            <div class="relative mb-4">
+              <img src="${char.imgSrc}" alt="${char.name}" class="w-32 h-32 rounded-full border-4 border-gray-100 shadow-sm object-cover" />
+            </div>
+            <h3 class="text-2xl font-bold text-gray-800 mb-6 text-center">${char.name}</h3>
+            ${!state.isVotingFinished ? `
+              <div class="flex items-center space-x-3 bg-gray-50 p-2 rounded-2xl w-full justify-center border-2 border-gray-100">
+                <button onclick="handleVoteChange(${char.id}, -1)" class="p-3 bg-red-100 text-red-600 rounded-xl hover:bg-red-200 active:scale-95 transition">
+                  <i data-lucide="minus" class="w-6 h-6"></i>
+                </button>
+                <input type="number" min="0" value="${char.votes}" onchange="handleVoteInput(${char.id}, this.value)" class="w-16 text-center text-4xl font-black text-gray-700 bg-transparent focus:outline-none" />
+                <button onclick="handleVoteChange(${char.id}, 1)" class="p-3 bg-green-100 text-green-600 rounded-xl hover:bg-green-200 active:scale-95 transition">
+                  <i data-lucide="plus" class="w-6 h-6"></i>
+                </button>
+              </div>
+            ` : `
+              <div class="text-3xl font-black text-gray-700 bg-gray-100 px-6 py-3 rounded-2xl w-full text-center border-2 border-gray-200">
+                ${char.votes} 票
+              </div>
+            `}
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-orange-50 to-yellow-50 p-8 font-sans">
+          <div class="max-w-6xl mx-auto">
+            <div class="flex justify-between items-center mb-10">
+              <h2 class="text-4xl font-black text-orange-600 bg-white px-8 py-4 rounded-full shadow-md border-4 border-orange-200 flex items-center">
+                <i data-lucide="trophy" class="w-10 h-10 mr-4 text-yellow-500"></i>
+                ${state.isVotingFinished ? '🎉 投票結果出爐！ 🎉' : '✋ 舉手投票活動 ✋'}
+              </h2>
+              <div class="flex space-x-4">
+                ${!state.isVotingFinished ? `
+                  <button onclick="setIsVotingFinished(true)" class="flex items-center px-8 py-4 bg-green-500 text-white font-black text-2xl rounded-full shadow-lg hover:bg-green-600 hover:scale-105 transition border-4 border-green-300 animate-bounce">
+                    <i data-lucide="check-circle" class="w-8 h-8 mr-2"></i> 完成投票
+                  </button>
+                ` : `
+                  <button onclick="setPage('video')" class="flex items-center px-8 py-4 bg-red-500 text-white font-black text-2xl rounded-full shadow-lg hover:bg-red-600 hover:scale-105 transition border-4 border-red-300 animate-pulse">
+                    <i data-lucide="youtube" class="w-8 h-8 mr-2"></i> 觀看手作影片
+                  </button>
+                `}
+                <button onclick="setPage('main')" class="flex items-center px-6 py-4 bg-white text-gray-600 font-bold rounded-full shadow-md hover:bg-gray-50 transition border-2 border-gray-200">
+                  <i data-lucide="home" class="w-6 h-6 mr-2"></i> 返回主活動
+                </button>
+              </div>
+            </div>
+            ${winnersHtml}
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+              ${voteCards}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderVideo() {
+      const steps = [
+        { id: 1, text: "搓湯圓", emoji: "🍡" },
+        { id: 2, text: "壓扁扁", emoji: "🥞" },
+        { id: 3, text: "小圓片排隊變成毛毛蟲", emoji: "🐛" },
+        { id: 4, text: "捲起毛毛蟲", emoji: "🥐" },
+        { id: 5, text: "撥開花瓣 (花朵開花囉)", emoji: "🌸" },
+        { id: 6, text: "玫瑰花完成", emoji: "🌹" },
+      ];
+
+      const stepsHtml = steps.map(step => `
+        <div class="bg-white p-6 rounded-[2rem] shadow-md border-b-4 border-pink-200 flex flex-col items-center text-center hover:scale-105 transition-transform duration-300">
+          <div class="w-16 h-16 bg-gradient-to-br from-pink-300 to-rose-400 text-white rounded-full flex items-center justify-center text-3xl font-black mb-4 shadow-inner border-4 border-white">
+            ${step.id}
+          </div>
+          <div class="text-5xl mb-4">${step.emoji}</div>
+          <span class="text-xl font-bold text-gray-700 leading-snug">${step.text}</span>
+        </div>
+      `).join('');
+
+      return `
+        <div class="min-h-screen bg-gradient-to-br from-rose-50 to-pink-100 p-8 font-sans flex flex-col items-center">
+          <div class="w-full max-w-5xl">
+            <div class="flex justify-between items-center mb-6">
+              <h2 class="text-4xl font-black text-rose-600 bg-white px-8 py-4 rounded-full shadow-md border-4 border-rose-200 flex items-center">
+                <i data-lucide="heart" class="w-8 h-8 mr-3 text-red-400 fill-current"></i> 製作感恩小禮物
+              </h2>
+              <div class="flex space-x-4">
+                <button onclick="setPage('voting')" class="flex items-center px-6 py-3 bg-white text-gray-600 font-bold rounded-full shadow-md hover:bg-gray-50 transition border-2 border-gray-200">
+                  返回投票結果
+                </button>
+                <button onclick="setPage('review')" class="flex items-center px-6 py-3 bg-indigo-500 text-white font-bold rounded-full shadow-md hover:bg-indigo-600 transition border-2 border-indigo-400">
+                  看總結回顧 <i data-lucide="arrow-right" class="w-5 h-5 ml-2"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="bg-white/90 p-8 rounded-[3rem] shadow-2xl border-4 border-pink-200 animate-slide-up">
+              <!-- YouTube 影片區塊 -->
+              <div class="mb-10 flex flex-col items-center">
+                <a href="https://www.youtube.com/watch?v=cfojTdbPV-I" target="_blank" rel="noopener noreferrer" class="group relative aspect-video w-full max-w-3xl rounded-3xl overflow-hidden border-8 border-rose-100 shadow-lg block hover:scale-[1.02] transition-transform duration-300 bg-black cursor-pointer">
+                  <img src="https://img.youtube.com/vi/cfojTdbPV-I/hqdefault.jpg" alt="玫瑰花黏土教學" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
+                  <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="bg-red-600 text-white p-6 rounded-full shadow-2xl group-hover:bg-red-500 group-hover:scale-110 transition-all">
+                      <i data-lucide="play" class="w-16 h-16 fill-current ml-2"></i>
+                    </div>
+                  </div>
+                </a>
+                
+                <div class="text-center mt-6 animate-pulse">
+                  <p class="text-red-500 font-bold text-2xl flex items-center justify-center bg-red-50 px-6 py-3 rounded-full border-2 border-red-200">
+                    <i data-lucide="youtube" class="w-8 h-8 mr-3"></i> 
+                    點擊上方畫面，前往 YouTube 觀看教學影片！ 🌹
+                  </p>
+                </div>
+              </div>
+
+              <!-- 製作步驟圖卡區 -->
+              <div class="bg-pink-50 rounded-3xl p-8 border-2 border-pink-100">
+                <h3 class="text-3xl font-black text-pink-800 mb-8 text-center flex items-center justify-center">
+                  ✨ 跟著步驟一起做黏土玫瑰花 ✨
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-6">
+                  ${stepsHtml}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- 主渲染函數 ---
+    function render() {
+      const app = document.getElementById('app');
+      let html = '';
+      
+      if (state.page === 'home') html = renderHome();
+      else if (state.page === 'main') html = renderMain();
+      else if (state.page === 'review') html = renderReview();
+      else if (state.page === 'voting') html = renderVoting();
+      else if (state.page === 'video') html = renderVideo();
+
+      app.innerHTML = html;
+      
+      // 渲染完 HTML 後，呼叫 Lucide 重新繪製 SVG 圖示
+      lucide.createIcons();
+    }
+
+    // 啟動應用程式
+    render();
+  </script>
+</body>
+</html>
